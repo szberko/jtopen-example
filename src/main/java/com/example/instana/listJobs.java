@@ -17,8 +17,6 @@ package com.example.instana;
 import java.beans.PropertyVetoException;
 import java.io.*;
         import java.util.*;
-import java.util.function.ToLongFunction;
-import java.util.stream.Collectors;
 
 import com.ibm.as400.access.*;
 
@@ -72,7 +70,7 @@ public class listJobs extends Object
             if (password != null)
                 as400.setPassword(password);
 
-            sendCommand(as400);
+            isCollectionServicesRunning(as400);
             readFile(as400, "/QSYS.LIB/QPFRDATA.LIB/QAPMSQLPC.FILE");
 
 
@@ -102,18 +100,21 @@ public class listJobs extends Object
     void readFile(AS400 as400, String filename) {
         try {
 
-            Optional<IFSFile> latestMember = retrieveLatestMember(as400, filename);
+//            Optional<IFSFile> latestMember = retrieveLatestMember(as400, filename);
+//
+//            SequentialFile myFile =
+//                    new SequentialFile(as400, latestMember.get().getAbsolutePath());
 
-            KeyedFile myFile =
-                    new KeyedFile(as400, latestMember.get().getAbsolutePath());
+            QSYSObjectPathName qsysObjectPathName = new QSYSObjectPathName("QPFRDATA", "QAPMISUM", "*LAST", "MBR");
+            SequentialFile myFile =
+                    new SequentialFile(as400, qsysObjectPathName.getPath());
 
             AS400FileRecordDescription recordDescription =
-                    new AS400FileRecordDescription(as400, filename);
+                    new AS400FileRecordDescription(as400, qsysObjectPathName.getPath());
 
             myFile.setRecordFormat(recordDescription.retrieveRecordFormat()[0]);
 
-//            myFile.open(AS400File.READ_ONLY, 0, AS400File.COMMIT_LOCK_LEVEL_NONE);
-            myFile.open();
+            myFile.open(AS400File.READ_ONLY, 0, AS400File.COMMIT_LOCK_LEVEL_NONE);
             Record lastRecord = myFile.readLast();
 
             System.out.println(lastRecord);
@@ -152,7 +153,7 @@ public class listJobs extends Object
         return Optional.empty();
     }
 
-    void sendCommand(AS400 as400) {
+    void isCollectionServicesRunning(AS400 as400) {
         CommandCall command = new CommandCall(as400);
         try {
             if (!command.run("CHKPFRCOL")) {
@@ -163,7 +164,8 @@ public class listJobs extends Object
             for (int i = 0; i < messagelist.length; ++i)
             {
                 // Show each message.
-                System.out.println(messagelist[i].getText());
+                System.out.println("Message: " + messagelist[0].getText());
+                System.out.println("Help: " + messagelist[0].getHelp());
             }
 
         } catch (AS400SecurityException e) {
